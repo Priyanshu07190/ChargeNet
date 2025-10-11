@@ -1,0 +1,19 @@
+/* 
+  @file index.css
+  CSS validation is disabled for Tailwind directives
+  VS Code CSS language server may show warnings but these are safe to ignore
+  PostCSS processes these @tailwind directives during build
+*/
+
+/* Import map-specific styles first */
+@import './styles/map.css';
+
+/* stylelint-disable at-rule-no-unknown */
+/* Tailwind CSS directives - processed by PostCSS */
+/* CSS-disable-next-line unknown-at-rule */
+@tailwind base;
+/* CSS-disable-next-line unknown-at-rule */
+@tailwind components; 
+/* CSS-disable-next-line unknown-at-rule */
+@tailwind utilities;
+/* stylelint-enable at-rule-no-unknown */
