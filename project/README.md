@@ -835,18 +835,7 @@ Built with ❤️ by **Team ChargeNet**
 
 ---
 
-## 📞 Support
-
-Having issues? We're here to help!
-
-- 📧 **Email**: support@chargenet.com
-- 💬 **Discord**: [Join our community](https://discord.gg/chargenet)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/Priyanshu07190/ChargeNet/issues)
-- 📖 **Documentation**: [Wiki](https://github.com/Priyanshu07190/ChargeNet/wiki)
-
----
-
-## 🚀 Future Roadmap
+##  Future Roadmap
 
 - [ ] Mobile App (React Native)
 - [ ] AI-based Route Optimization
