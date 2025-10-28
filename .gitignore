@@ -1,38 +1,71 @@
 # Dependencies
 node_modules/
+**/node_modules/
 package-lock.json
+yarn.lock
 
 # Environment Variables (NEVER COMMIT THESE!)
 .env
 .env.local
 .env.production
 .env.development
+.env.test
 *.env
+**/.env
+
+# Backend specific
+backend/.env
+backend/.env.production
+backend/.env.local
 
 # Build outputs
 dist/
 build/
 .vite/
+**/dist/
+**/build/
 
 # Logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
 # OS Files
 .DS_Store
 Thumbs.db
+*.swp
+*.swo
+*~
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
+*.sublime-project
+*.sublime-workspace
 
 # Testing
 coverage/
+.nyc_output/
+*.lcov
 
 # Misc
 .cache/
 temp/
+tmp/
+.temp/
+.tmp/
+
+# Debug
+debug/
+.history/
+
+# Deployment
+.vercel
+.netlify
+.render
+
+# Local development
+.local
