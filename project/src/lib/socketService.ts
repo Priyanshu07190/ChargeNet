@@ -1,5 +1,12 @@
 import { io, Socket } from 'socket.io-client';
 
+// Get WebSocket URL from environment variable
+// Remove '/api' from the URL if present, and use base URL for socket connection
+const getSocketUrl = () => {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  return apiUrl.replace('/api', '');
+};
+
 class SocketService {
   private socket: Socket | null = null;
   private isConnected = false;
@@ -9,7 +16,10 @@ class SocketService {
       return this.socket;
     }
 
-    this.socket = io('http://localhost:5000', {
+    const socketUrl = getSocketUrl();
+    console.log('🔌 Connecting to WebSocket:', socketUrl);
+
+    this.socket = io(socketUrl, {
       withCredentials: true,
       transports: ['websocket', 'polling']
     });

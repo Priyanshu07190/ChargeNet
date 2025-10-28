@@ -1,7 +1,11 @@
 import axios from 'axios';
 import { apiService } from './apiService';
 
-const API_URL = 'http://localhost:5000/api';
+// Use environment variable for API URL
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const RAZORPAY_KEY = import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_RRoCzP8PpVdxfg';
+
+console.log('💳 Payment Service initialized with API URL:', API_URL);
 
 // Load Razorpay script dynamically
 export const loadRazorpayScript = (): Promise<boolean> => {
