@@ -19,6 +19,7 @@ const allowedOrigins = [
   'http://127.0.0.1:5173',
   'http://localhost:3000',
   'http://127.0.0.1:3000',
+  'https://charge-net.vercel.app', // Production frontend
   process.env.FRONTEND_URL, // Your Vercel/Netlify URL
 ].filter(Boolean); // Remove undefined values
 
