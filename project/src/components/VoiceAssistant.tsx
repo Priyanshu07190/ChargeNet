@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, Volume2, VolumeX, Zap, MapPin, Calendar } from 'lucide-react';
 

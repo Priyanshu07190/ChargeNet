@@ -1,3 +1,4 @@
+// Updated for hackathon
 import { useState, useEffect } from 'react';
 import { Users, Zap, DollarSign, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useAnalytics } from '../hooks/useAnalytics';

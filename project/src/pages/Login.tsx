@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';

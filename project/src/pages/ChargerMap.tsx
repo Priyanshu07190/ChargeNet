@@ -1,3 +1,4 @@
+// Updated for hackathon
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MapPin, Zap, Clock, Star } from 'lucide-react';

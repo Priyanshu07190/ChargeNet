@@ -1,3 +1,4 @@
+// Updated for hackathon
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, Menu, X, User, Map, Calendar } from 'lucide-react';

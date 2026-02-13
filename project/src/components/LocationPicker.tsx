@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { useState, useRef, useEffect } from 'react';
 import { MapPin, Map as MapIcon, X } from 'lucide-react';
 

@@ -1,3 +1,4 @@
+// Updated for hackathon
 import { useState, useEffect, useCallback } from 'react';
 import { analyticsService } from '../lib/analyticsService';
 

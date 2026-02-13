@@ -1,3 +1,4 @@
+// Updated for hackathon
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { 

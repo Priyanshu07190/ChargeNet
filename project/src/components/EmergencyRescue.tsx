@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, MapPin, Loader } from 'lucide-react';
 import { authService } from '../lib/auth';

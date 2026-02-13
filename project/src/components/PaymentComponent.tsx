@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { useState } from 'react';
 import { CreditCard, AlertCircle, CheckCircle, Loader } from 'lucide-react';
 import { createPaymentOrder, openRazorpayCheckout, verifyPayment } from '../lib/paymentService';

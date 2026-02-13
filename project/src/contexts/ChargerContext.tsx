@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { apiService } from '../lib/apiService';
 import { MongoCharger } from '../types';

@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Navigation, MapPin } from 'lucide-react';

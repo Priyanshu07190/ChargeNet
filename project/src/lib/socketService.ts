@@ -1,3 +1,4 @@
+// Updated for hackathon
 import { io, Socket } from 'socket.io-client';
 
 // Get WebSocket URL from environment variable

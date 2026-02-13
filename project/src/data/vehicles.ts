@@ -1,3 +1,4 @@
+// Updated for hackathon
 export const vehicleCategories = {
   '2-wheeler': {
     electric: [

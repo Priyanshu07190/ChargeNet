@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 

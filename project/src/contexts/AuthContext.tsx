@@ -1,3 +1,4 @@
+// Updated for hackathon
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authService, User } from '../lib/auth';
 
