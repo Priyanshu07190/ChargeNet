@@ -1,4 +1,4 @@
-// Updated for hackathon
+// #
 import { useState } from 'react';
 import { Zap, Clock, MapPin, Star, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';

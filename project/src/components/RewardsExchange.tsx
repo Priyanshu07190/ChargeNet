@@ -1,4 +1,4 @@
-// Updated for hackathon
+// #
 import React, { useState } from 'react';
 import { Gift, Zap, Clock, Star, ShoppingBag, Coffee, Fuel } from 'lucide-react';
 

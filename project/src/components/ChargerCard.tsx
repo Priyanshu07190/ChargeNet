@@ -1,4 +1,4 @@
-// Updated for hackathon
+// #
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MapPin, Star, Zap, Clock, Navigation, Wifi } from 'lucide-react';

@@ -1,4 +1,4 @@
-// Updated for hackathon
+// #
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, MapPin, Phone, Navigation as NavigationIcon, DollarSign, X } from 'lucide-react';
 import { authService } from '../lib/auth';

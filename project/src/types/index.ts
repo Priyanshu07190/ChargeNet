@@ -1,4 +1,4 @@
-// Updated for hackathon
+// #
 // Legacy types for backward compatibility
 export interface Charger {
   id: string;

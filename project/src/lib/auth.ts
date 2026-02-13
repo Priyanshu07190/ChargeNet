@@ -1,4 +1,4 @@
-// Updated for hackathon
+// #
 import { apiService } from './apiService';
 
 export interface User {

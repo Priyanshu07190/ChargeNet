@@ -1,4 +1,4 @@
-// Updated for hackathon
+// #
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 
