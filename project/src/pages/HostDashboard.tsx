@@ -1,4 +1,3 @@
-// #
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
@@ -935,40 +934,42 @@ const HostDashboard = () => {
     }
   }, [activeTab, refreshKey]);
 
+  const hostTabs = [
+    { id: 'overview', name: 'Overview', icon: TrendingUp },
+    { id: 'trip-planner', name: 'Trip Planner', icon: Navigation },
+    { id: 'my-bookings', name: 'My Bookings', icon: User },
+    { id: 'chargers', name: 'My Chargers', icon: Zap },
+    { id: 'rescue-requests', name: 'Rescue Requests', icon: AlertTriangle },
+    { id: 'bookings', name: 'Customer Bookings', icon: Calendar },
+    { id: 'request-charger', name: 'Request Free Charger', icon: Gift },
+    { id: 'carbon-trading', name: 'Carbon Trading', icon: Leaf },
+    { id: 'emergency-rescue', name: 'Emergency SOS', icon: AlertTriangle },
+    { id: 'support', name: 'Support', icon: HelpCircle }
+  ] as const;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex pt-16">
+    <div className="app-page-bg">
+      <div className="mx-auto flex max-w-[1500px] gap-5 px-4 pb-8 pt-20 lg:px-6">
         {/* Sidebar Navigation */}
-        <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white h-[calc(100vh-64px)] fixed left-0 top-16 shadow-lg transition-all duration-300 z-30 overflow-y-auto border-r border-gray-200`}>
+        <div className={`${sidebarOpen ? 'w-72' : 'w-24'} sticky top-24 h-[calc(100vh-112px)] surface-panel transition-all duration-300 z-20 overflow-y-auto hidden lg:block`}>
           {/* Toggle Button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full p-4 flex items-center justify-center hover:bg-gray-50 border-b border-gray-200 transition-colors"
+            className="w-full p-4 flex items-center justify-center hover:bg-slate-50 border-b border-slate-200 transition-colors"
           >
             {sidebarOpen ? (
               <>
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
-                <span className="ml-2 text-sm font-medium text-gray-700">Collapse</span>
+                <ChevronLeft className="w-5 h-5 text-slate-600" />
+                <span className="ml-2 text-sm font-medium text-slate-700">Collapse</span>
               </>
             ) : (
-              <Menu className="w-6 h-6 text-gray-600" />
+              <Menu className="w-6 h-6 text-slate-600" />
             )}
           </button>
 
           {/* Menu Items */}
-          <nav className="py-2">
-            {[
-              { id: 'overview', name: 'Overview', icon: TrendingUp },
-              { id: 'trip-planner', name: 'Trip Planner', icon: Navigation },
-              { id: 'my-bookings', name: 'My Bookings', icon: User },
-              { id: 'chargers', name: 'My Chargers', icon: Zap },
-              { id: 'rescue-requests', name: 'Rescue Requests', icon: AlertTriangle },
-              { id: 'bookings', name: 'Customer Bookings', icon: Calendar },
-              { id: 'request-charger', name: 'Request Free Charger', icon: Gift },
-              { id: 'carbon-trading', name: 'Carbon Trading', icon: Leaf },
-              { id: 'emergency-rescue', name: 'Emergency SOS', icon: AlertTriangle },
-              { id: 'support', name: 'Support', icon: HelpCircle }
-            ].map((tab) => {
+          <nav className="p-2 space-y-1">
+            {hostTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -982,14 +983,14 @@ const HostDashboard = () => {
                   }}
                   className={`w-full flex items-center px-4 py-3 transition-all duration-200 ${
                     isActive
-                      ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white border-l-4 border-green-600'
-                      : 'text-gray-700 hover:bg-gray-100 border-l-4 border-transparent'
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'text-slate-700 hover:bg-slate-100'
                   }`}
                   title={!sidebarOpen ? tab.name : ''}
                 >
-                  <Icon className={`${sidebarOpen ? 'w-5 h-5' : 'w-6 h-6'} flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-600'}`} />
+                  <Icon className={`${sidebarOpen ? 'w-5 h-5' : 'w-6 h-6'} flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                   {sidebarOpen && (
-                    <span className={`ml-3 font-medium text-sm ${isActive ? 'text-white' : 'text-gray-700'}`}>
+                    <span className={`ml-3 font-medium text-sm ${isActive ? 'text-white' : 'text-slate-700'}`}>
                       {tab.name}
                     </span>
                   )}
@@ -1000,110 +1001,135 @@ const HostDashboard = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className={`flex-1 ${sidebarOpen ? 'ml-64' : 'ml-20'} transition-all duration-300`}>
+        <div className="min-w-0 flex-1">
           {/* Header */}
-          <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white sticky top-16 z-20 shadow-lg">
-            <div className="px-6 py-6">
-              <div className="flex items-center justify-between">
+          <div className="surface-panel p-6">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">Host Dashboard</h1>
-                  <p className="text-green-100">Welcome back, {user?.name}! 🏡⚡</p>
+                  <h1 className="text-3xl font-semibold text-slate-900 mb-1">Host Dashboard</h1>
+                  <p className="text-slate-500">Welcome back, {user?.name}. Manage your charging business efficiently.</p>
                 </div>
                 
-                <div className="flex items-center space-x-4">
-                  <div className="bg-white/10 backdrop-blur-lg rounded-lg px-4 py-2">
-                    <div className="text-sm opacity-80">Host Rating</div>
-                    <div className="text-xl font-bold">{avgRating.toFixed(1)} ⭐</div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-2">
+                    <div className="text-xs text-slate-500">Host Rating</div>
+                    <div className="text-lg font-semibold text-slate-900">{avgRating.toFixed(1)} ⭐</div>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-lg rounded-lg px-4 py-2">
-                <div className="text-sm opacity-80">Green Host</div>
-                <div className="text-xl font-bold">🌱 New Host</div>
+                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-2">
+                <div className="text-xs text-slate-500">Green Host</div>
+                <div className="text-lg font-semibold text-slate-900">🌱 New Host</div>
               </div>
+            </div>
+          </div>
+
+          {/* Mobile Tab Bar */}
+          <div className="surface-panel mt-4 p-2 lg:hidden">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {hostTabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as any);
+                      if (tab.id === 'bookings') {
+                        refreshBookings();
+                      }
+                    }}
+                    className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{tab.name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
           
           {/* Quick Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</div>
-              <div className="text-sm opacity-80">Total Revenue</div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+            <div className="surface-panel p-4 text-center">
+              <div className="text-2xl font-semibold text-slate-900">₹{totalRevenue.toLocaleString()}</div>
+              <div className="text-sm text-slate-500">Total Revenue</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">{totalBookings}</div>
-              <div className="text-sm opacity-80">Total Bookings</div>
+            <div className="surface-panel p-4 text-center">
+              <div className="text-2xl font-semibold text-slate-900">{totalBookings}</div>
+              <div className="text-sm text-slate-500">Total Bookings</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">{activeChargers}</div>
-              <div className="text-sm opacity-80">Active Chargers</div>
+            <div className="surface-panel p-4 text-center">
+              <div className="text-2xl font-semibold text-slate-900">{activeChargers}</div>
+              <div className="text-sm text-slate-500">Active Chargers</div>
             </div>
-            <div className="bg-white/10 backdrop-blur-lg rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">{chargers.filter(c => c.greenEnergy).length}</div>
-              <div className="text-sm opacity-80">Green Chargers</div>
+            <div className="surface-panel p-4 text-center">
+              <div className="text-2xl font-semibold text-slate-900">{chargers.filter(c => c.greenEnergy).length}</div>
+              <div className="text-sm text-slate-500">Green Chargers</div>
             </div>
           </div>
-        </div>
-      </div>
+          
 
           {/* Content Container */}
-          <div className="px-6 py-8">
+          <div className="py-6">
 
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+              <div className="surface-panel p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Monthly Revenue</p>
-                    <p className="text-3xl font-bold text-gray-900">₹0</p>
+                    <p className="text-sm font-medium text-slate-500">Monthly Revenue</p>
+                    <p className="text-3xl font-semibold text-slate-900">₹0</p>
                   </div>
-                  <div className="bg-green-100 p-3 rounded-xl">
+                  <div className="bg-emerald-50 p-3 rounded-xl">
                     <DollarSign className="h-6 w-6 text-green-600" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center">
-                  <span className="text-gray-500 text-sm font-medium">Add chargers to start earning</span>
+                  <span className="text-slate-500 text-sm font-medium">Add chargers to start earning</span>
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+              <div className="surface-panel p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Active Sessions</p>
-                    <p className="text-3xl font-bold text-gray-900">{bookings.filter(b => b.status === 'active').length}</p>
+                    <p className="text-sm font-medium text-slate-500">Active Sessions</p>
+                    <p className="text-3xl font-semibold text-slate-900">{bookings.filter(b => b.status === 'active').length}</p>
                   </div>
-                  <div className="bg-blue-100 p-3 rounded-xl">
+                  <div className="bg-blue-50 p-3 rounded-xl">
                     <Battery className="h-6 w-6 text-blue-600" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center">
-                  <span className="text-gray-500 text-sm font-medium">No active sessions</span>
+                  <span className="text-slate-500 text-sm font-medium">No active sessions</span>
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+              <div className="surface-panel p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Average Utilization</p>
-                    <p className="text-3xl font-bold text-gray-900">{chargers.length > 0 ? Math.round(chargers.reduce((sum, c) => sum + c.utilization, 0) / chargers.length) : 0}%</p>
+                    <p className="text-sm font-medium text-slate-500">Average Utilization</p>
+                    <p className="text-3xl font-semibold text-slate-900">{chargers.length > 0 ? Math.round(chargers.reduce((sum, c) => sum + c.utilization, 0) / chargers.length) : 0}%</p>
                   </div>
-                  <div className="bg-purple-100 p-3 rounded-xl">
+                  <div className="bg-violet-50 p-3 rounded-xl">
                     <TrendingUp className="h-6 w-6 text-purple-600" />
                   </div>
                 </div>
                 <div className="mt-4 flex items-center">
-                  <span className="text-gray-500 text-sm font-medium">No chargers yet</span>
+                  <span className="text-slate-500 text-sm font-medium">No chargers yet</span>
                 </div>
               </div>
 
-              <div className="bg-white p-6 rounded-2xl shadow-lg border border-gray-100">
+              <div className="surface-panel p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Customer Rating</p>
-                    <p className="text-3xl font-bold text-gray-900">{avgRating > 0 ? avgRating.toFixed(1) : '0.0'}</p>
+                    <p className="text-sm font-medium text-slate-500">Customer Rating</p>
+                    <p className="text-3xl font-semibold text-slate-900">{avgRating > 0 ? avgRating.toFixed(1) : '0.0'}</p>
                   </div>
-                  <div className="bg-yellow-100 p-3 rounded-xl">
+                  <div className="bg-amber-50 p-3 rounded-xl">
                     <Star className="h-6 w-6 text-yellow-600" />
                   </div>
                 </div>
@@ -2272,6 +2298,7 @@ const HostDashboard = () => {
             </div>
           </div>
         )}
+          </div>
           </div>
         </div>
       </div>

@@ -1,4 +1,3 @@
-// #
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import Navbar from './components/Navbar';
@@ -51,25 +50,23 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-4 border-blue-500 mx-auto mb-4"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center animate-pulse">
-                <span className="text-white font-bold text-2xl">⚡</span>
-              </div>
+      <div className="app-page-bg flex items-center justify-center px-4">
+        <div className="surface-panel w-full max-w-sm p-8 text-center">
+          <div className="relative mx-auto mb-5 h-16 w-16">
+            <div className="absolute inset-0 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600"></div>
+            <div className="absolute inset-2 flex items-center justify-center rounded-full bg-blue-600 text-white text-xl">
+              ⚡
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">ChargeNet</h2>
-          <p className="text-gray-600 animate-pulse">Powering your EV journey...</p>
+          <h2 className="text-xl font-semibold text-slate-900 mb-1">ChargeNet</h2>
+          <p className="text-sm text-slate-500">Loading workspace...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
+    <div className="app-page-bg">
       {user && <Navbar />}
       
       <Routes>

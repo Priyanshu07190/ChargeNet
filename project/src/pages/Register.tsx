@@ -1,4 +1,3 @@
-// #
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Zap, User, Mail, Lock, Phone, Car, Home, AlertCircle } from 'lucide-react';
@@ -138,30 +137,30 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full space-y-8">
+    <div className="auth-shell py-12">
+      <div className="max-w-2xl w-full space-y-6">
         <div className="text-center">
           <div className="flex justify-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 rounded-2xl bg-blue-600 shadow-md flex items-center justify-center">
               <Zap className="h-8 w-8 text-white" />
             </div>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
+          <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900">
             Join ChargeNet
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Create your account and start the EV revolution
+          <p className="mt-2 text-sm text-slate-600">
+            Create your account to access a modern EV charging platform
           </p>
         </div>
 
         {/* Progress Indicator */}
         <div className="flex justify-center">
-          <div className="flex space-x-2">
+          <div className="surface-panel flex space-x-2 px-4 py-3">
             {[1, 2, 3].map((num) => (
               <div
                 key={num}
                 className={`w-3 h-3 rounded-full transition-colors ${
-                  step >= num ? 'bg-blue-500' : 'bg-gray-300'
+                  step >= num ? 'bg-blue-600' : 'bg-slate-300'
                 }`}
               />
             ))}
@@ -169,13 +168,13 @@ const Register = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-2">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-red-500" />
             <span className="text-red-700 text-sm">{error}</span>
           </div>
         )}
 
-        <form className="mt-8 bg-white p-8 rounded-2xl shadow-xl" onSubmit={handleSubmit}>
+        <form className="surface-panel p-8" onSubmit={handleSubmit}>
           {step === 1 && (
             <div className="space-y-5">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>

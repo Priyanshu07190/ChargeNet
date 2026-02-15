@@ -1,7 +1,6 @@
-// #
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Zap, Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Zap, Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck, ArrowRight } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
@@ -41,128 +40,147 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="flex justify-center">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-              <Zap className="h-8 w-8 text-white" />
+    <div className="auth-shell">
+      <div className="grid w-full max-w-5xl grid-cols-1 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl lg:grid-cols-2">
+        <aside className="hidden bg-slate-900 p-10 text-slate-100 lg:block">
+          <div className="mb-14 flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-white">
+              <Zap className="h-5 w-5" />
             </div>
+            <span className="text-xl font-semibold tracking-tight">ChargeNet</span>
           </div>
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            Welcome back to ChargeNet
+
+          <h2 className="text-3xl font-semibold leading-tight text-white">
+            Reliable EV charging operations, built for scale.
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Sign in to your account and start charging smart
+          <p className="mt-4 text-sm leading-6 text-slate-300">
+            Manage stations, bookings, payments, and customer experience from one trusted platform.
           </p>
-        </div>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-2">
-            <AlertCircle className="h-5 w-5 text-red-500" />
-            <span className="text-red-700 text-sm">{error}</span>
+          <div className="mt-10 space-y-4">
+            <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3 text-sm">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              Secure session-based authentication
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3 text-sm">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              Real-time updates for hosts and drivers
+            </div>
+            <div className="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3 text-sm">
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              Production-ready payment integrations
+            </div>
           </div>
-        )}
+        </aside>
 
-        <form className="mt-8 space-y-6 bg-white p-8 rounded-2xl shadow-xl" onSubmit={handleSubmit}>
-          <div className="space-y-5">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="Enter your email"
-                />
+        <main className="p-6 sm:p-10">
+          <div className="mx-auto w-full max-w-md">
+            <div className="mb-8 text-center lg:text-left">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600">Welcome back</p>
+              <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Sign in to your account</h1>
+              <p className="mt-2 text-sm text-slate-500">Use your registered email and password to continue.</p>
+            </div>
+
+            {error && (
+              <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-3">
+                <AlertCircle className="mt-0.5 h-4 w-4 text-red-500" />
+                <span className="text-sm text-red-700">{error}</span>
               </div>
-            </div>
+            )}
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              <div>
+                <label htmlFor="email" className="mb-2 block text-sm font-medium text-slate-700">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <Mail className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input-modern pl-10"
+                    placeholder="you@company.com"
+                  />
                 </div>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400 hover:text-gray-600" />
-                  )}
-                </button>
               </div>
-            </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                Remember me
-              </label>
-            </div>
+              <div>
+                <label htmlFor="password" className="mb-2 block text-sm font-medium text-slate-700">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <Lock className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input-modern pl-10 pr-12"
+                    placeholder="••••••••"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-slate-400 hover:text-slate-600" />
+                    )}
+                  </button>
+                </div>
+              </div>
 
-            <div className="text-sm">
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
-                Forgot password?
-              </a>
-            </div>
-          </div>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm text-slate-600">
+                  <input
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  Remember me
+                </label>
 
-          <div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-xl text-white bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                'Sign In'
-              )}
-            </button>
-          </div>
+                <a href="#" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                  Forgot password?
+                </a>
+              </div>
 
-          <div className="text-center">
-            <span className="text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
-                Join ChargeNet
-              </Link>
-            </span>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-primary w-full gap-2 py-3 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                {loading ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white"></div>
+                ) : (
+                  <>
+                    Sign In <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+
+              <p className="pt-1 text-center text-sm text-slate-600 lg:text-left">
+                Don&apos;t have an account?{' '}
+                <Link to="/register" className="font-semibold text-blue-600 hover:text-blue-700">
+                  Create one
+                </Link>
+              </p>
+            </form>
           </div>
-        </form>
+        </main>
       </div>
     </div>
   );

@@ -17,3 +17,57 @@
 /* CSS-disable-next-line unknown-at-rule */
 @tailwind utilities;
 /* stylelint-enable at-rule-no-unknown */
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply antialiased text-slate-800;
+  font-feature-settings: 'cv11', 'ss01';
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@layer components {
+  .app-page-bg {
+    @apply min-h-screen bg-slate-50;
+    background-image:
+      radial-gradient(circle at 5% 0%, rgba(37, 99, 235, 0.08) 0%, transparent 30%),
+      radial-gradient(circle at 95% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 34%);
+  }
+
+  .surface-panel {
+    @apply bg-white/95 backdrop-blur border border-slate-200 rounded-2xl shadow-sm;
+  }
+
+  .nav-link {
+    @apply inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-100 hover:text-slate-900;
+  }
+
+  .nav-link-active {
+    @apply bg-blue-50 text-blue-700;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors duration-150 hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors duration-150 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/30;
+  }
+
+  .input-modern {
+    @apply block w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 placeholder:text-slate-400 transition-all duration-150 focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/10;
+  }
+
+  .auth-shell {
+    @apply min-h-screen app-page-bg flex items-center justify-center px-4 py-8;
+  }
+
+  .auth-card {
+    @apply w-full max-w-md surface-panel p-8;
+  }
+}
