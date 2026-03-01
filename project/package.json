@@ -14,7 +14,13 @@
     "testsprite": "npx @testsprite/testsprite-mcp"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@picovoice/porcupine-web": "^4.0.0",
+    "@picovoice/web-voice-processor": "^4.0.9",
+    "@tensorflow-models/speech-commands": "^0.5.4",
+    "@tensorflow/tfjs": "^4.22.0",
     "axios": "^1.12.2",
+    "elevenlabs": "^1.59.0",
     "lucide-react": "^0.344.0",
     "mongodb": "^6.18.0",
     "mongoose": "^8.17.1",

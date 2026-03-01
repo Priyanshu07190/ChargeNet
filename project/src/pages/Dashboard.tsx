@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { 
   Calendar, 
   Zap, 
@@ -27,10 +27,14 @@ import RewardsExchange from '../components/RewardsExchange';
 import EmergencyRescue from '../components/EmergencyRescue';
 import socketService from '../lib/socketService';
 
+const VALID_TABS = ['overview','trip-planner','bookings','analytics','urgent','rewards','carbon-trading','emergency-rescue','support'] as const;
+type TabId = typeof VALID_TABS[number];
+
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'trip-planner' | 'bookings' | 'analytics' | 'urgent' | 'rewards' | 'carbon-trading' | 'emergency-rescue' | 'support'>('overview');
+  const { tab: tabParam } = useParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchParams] = useSearchParams();
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
@@ -117,11 +121,18 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
-    // Sync active tab from URL query param
-    const tabParam = searchParams.get('tab');
-    if (tabParam && ['overview','bookings','analytics','urgent','rewards','support'].includes(tabParam)) {
-      console.log('🔄 Setting active tab from URL:', tabParam);
-      setActiveTab(tabParam as typeof activeTab);
+    // Sync active tab from route param (e.g. /dashboard/trip-planner)
+    if (tabParam && (VALID_TABS as readonly string[]).includes(tabParam)) {
+      console.log('🔄 Setting active tab from route param:', tabParam);
+      setActiveTab(tabParam as TabId);
+    }
+    // Fallback: also check query param ?tab= for backward compat
+    else {
+      const qTab = searchParams.get('tab');
+      if (qTab && (VALID_TABS as readonly string[]).includes(qTab)) {
+        console.log('🔄 Setting active tab from query param:', qTab);
+        setActiveTab(qTab as TabId);
+      }
     }
 
     // Connect to WebSocket for real-time updates
@@ -131,7 +142,7 @@ const Dashboard = () => {
     return () => {
       // Don't disconnect socket here as it's used across multiple components
     };
-  }, [searchParams]);
+  }, [tabParam, searchParams]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -405,7 +416,7 @@ const Dashboard = () => {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                  onClick={() => navigate(`/dashboard/${tab.id}`)}
                   className={`w-full flex items-center px-4 py-3 transition-all duration-200 ${
                     isActive
                       ? 'bg-blue-600 text-white shadow-sm'
@@ -467,7 +478,7 @@ const Dashboard = () => {
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                    onClick={() => navigate(`/dashboard/${tab.id}`)}
                     className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                       isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
                     }`}
@@ -556,7 +567,7 @@ const Dashboard = () => {
                   <h3 className="text-xl font-bold text-gray-900">Recent Charging Sessions</h3>
                   {recentBookings.length > 0 && (
                     <button
-                      onClick={() => setActiveTab('bookings')}
+                      onClick={() => navigate('/dashboard/bookings')}
                       className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                     >
                       View All

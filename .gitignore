@@ -70,3 +70,4 @@ debug/
 
 # Local development
 .local
+.env*.local

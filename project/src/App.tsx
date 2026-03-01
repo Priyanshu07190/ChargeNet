@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import Navbar from './components/Navbar';
+import GenniePro from './components/GenniePro';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -68,6 +69,7 @@ function AppContent() {
   return (
     <div className="app-page-bg">
       {user && <Navbar />}
+      {user && <GenniePro />}
       
       <Routes>
         {/* Root path: restore last visited route if available to keep user on the same page after refresh */}
@@ -78,8 +80,12 @@ function AppContent() {
         <Route path="/login" element={user ? (user.user_type === 'host' ? <Navigate to="/host-dashboard" replace /> : <Navigate to="/dashboard" replace />) : <Login />} />
         <Route path="/register" element={user ? (user.user_type === 'host' ? <Navigate to="/host-dashboard" replace /> : <Navigate to="/dashboard" replace />) : <Register />} />
         <Route path="/dashboard" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
+        <Route path="/dashboard/:tab" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
         <Route path="/host-dashboard" element={user?.user_type === 'host' ? <HostDashboard /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/host-dashboard/:tab" element={user?.user_type === 'host' ? <HostDashboard /> : <Navigate to="/dashboard" replace />} />
+        <Route path="/chargers" element={user ? <ChargerMap /> : <Navigate to="/login" replace />} />
         <Route path="/map" element={user ? <ChargerMap /> : <Navigate to="/login" replace />} />
+        <Route path="/bookings" element={user ? <Dashboard /> : <Navigate to="/login" replace />} />
         <Route path="/booking/:chargerId" element={user ? <Booking /> : <Navigate to="/login" replace />} />
         <Route path="/profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
       </Routes>

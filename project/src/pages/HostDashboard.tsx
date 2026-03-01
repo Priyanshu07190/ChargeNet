@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { 
   TrendingUp, 
   Zap, 
@@ -31,6 +31,9 @@ import socketService from '../lib/socketService';
 import TripPlanner from '../components/TripPlanner';
 import EmergencyRescue from '../components/EmergencyRescue';
 import HostRescueRequests from '../components/HostRescueRequests';
+
+const HOST_VALID_TABS = ['overview','trip-planner','my-bookings','chargers','rescue-requests','bookings','request-charger','carbon-trading','emergency-rescue','support'] as const;
+type HostTabId = typeof HOST_VALID_TABS[number];
 
 interface HostCharger {
   id: string;
@@ -107,9 +110,10 @@ const getCustomerPhone = (booking: any, driverProfile: any = null): string | und
 const HostDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { tab: routeTab } = useParams<{ tab?: string }>();
   
   // State Management
-  const [activeTab, setActiveTab] = useState<'overview' | 'trip-planner' | 'my-bookings' | 'chargers' | 'rescue-requests' | 'bookings' | 'request-charger' | 'carbon-trading' | 'emergency-rescue' | 'support'>('overview');
+  const [activeTab, setActiveTab] = useState<HostTabId>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [chargers, setChargers] = useState<HostCharger[]>([]);
   const [bookings, setBookings] = useState<BookingData[]>([]);
@@ -237,10 +241,16 @@ const HostDashboard = () => {
   };
 
   useEffect(() => {
-    // Sync active tab from URL param
-    const tabParam = searchParams.get('tab');
-    if (tabParam && ['overview','trip-planner','my-bookings','chargers','bookings','request-charger','support'].includes(tabParam)) {
-      setActiveTab(tabParam as any);
+    // Sync active tab from route param (e.g. /host-dashboard/trip-planner)
+    if (routeTab && (HOST_VALID_TABS as readonly string[]).includes(routeTab)) {
+      setActiveTab(routeTab as HostTabId);
+    }
+    // Fallback: also check query param ?tab= for backward compat
+    else {
+      const qTab = searchParams.get('tab');
+      if (qTab && (HOST_VALID_TABS as readonly string[]).includes(qTab)) {
+        setActiveTab(qTab as HostTabId);
+      }
     }
 
     // Connect to WebSocket for real-time updates
@@ -362,7 +372,7 @@ const HostDashboard = () => {
       socketService.offChargerListChanged(handleChargerListChanged);
       socketService.offBookingListChanged(handleBookingListChanged);
     };
-  }, [searchParams, user?._id]);
+  }, [routeTab, searchParams, user?._id]);
 
   useEffect(() => {
     // Load chargers from backend for the current user
@@ -976,7 +986,7 @@ const HostDashboard = () => {
                 <button
                   key={tab.id}
                   onClick={() => {
-                    setActiveTab(tab.id as any);
+                    navigate(`/host-dashboard/${tab.id}`);
                     if (tab.id === 'bookings') {
                       refreshBookings();
                     }
@@ -1032,7 +1042,7 @@ const HostDashboard = () => {
                   <button
                     key={tab.id}
                     onClick={() => {
-                      setActiveTab(tab.id as any);
+                      navigate(`/host-dashboard/${tab.id}`);
                       if (tab.id === 'bookings') {
                         refreshBookings();
                       }
