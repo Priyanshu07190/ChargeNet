@@ -4,7 +4,7 @@
  * Similar to ChatGPT Voice, Google Assistant, etc.
  */
 
-const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY || 'sk_4250e05cb8e1a6831d326f52a1b37a91684bf8c1b45a201d';
+const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY || '';
 const AGENT_ID = 'your_agent_id'; // You'll create this in ElevenLabs dashboard
 
 interface ConversationConfig {

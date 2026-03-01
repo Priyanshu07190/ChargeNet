@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyAMLcJz-_2QReRVNPDUryMsYcqFBjFqezk';
+const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // System prompt that teaches Gemini about ChargeNet
