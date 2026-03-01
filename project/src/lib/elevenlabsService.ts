@@ -1,6 +1,9 @@
-const ELEVENLABS_API_KEY = 'sk_4250e05cb8e1a6831d326f52a1b37a91684bf8c1b45a201d';
+const ELEVENLABS_API_KEY = import.meta.env.VITE_ELEVENLABS_API_KEY || 'sk_4250e05cb8e1a6831d326f52a1b37a91684bf8c1b45a201d';
 const VOICE_ID = 'EXAVITQu4vr4xnSDxMaL'; // Sarah - Natural female voice
 
+/**
+ * Speak text using ElevenLabs TTS, with automatic browser fallback
+ */
 export async function textToSpeech(text: string): Promise<ArrayBuffer> {
   try {
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
@@ -12,7 +15,7 @@ export async function textToSpeech(text: string): Promise<ArrayBuffer> {
       },
       body: JSON.stringify({
         text: text,
-        model_id: 'eleven_turbo_v2', // Fastest model
+        model_id: 'eleven_turbo_v2',
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
@@ -28,11 +31,15 @@ export async function textToSpeech(text: string): Promise<ArrayBuffer> {
 
     return await response.arrayBuffer();
   } catch (error) {
-    console.error('ElevenLabs TTS Error:', error);
+    console.error('ElevenLabs TTS Error, falling back to browser speech:', error);
+    // Return empty buffer — caller should use playAudio which handles fallback
     throw error;
   }
 }
 
+/**
+ * Play audio buffer, or fall back to browser speech synthesis
+ */
 export function playAudio(audioBuffer: ArrayBuffer): Promise<void> {
   return new Promise((resolve, reject) => {
     const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
@@ -51,6 +58,47 @@ export function playAudio(audioBuffer: ArrayBuffer): Promise<void> {
     
     audio.play().catch(reject);
   });
+}
+
+/**
+ * Browser-based TTS fallback — works everywhere, no API key needed
+ */
+export function speakWithBrowser(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (!('speechSynthesis' in window)) {
+      console.warn('Browser speech synthesis not available');
+      resolve();
+      return;
+    }
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    // Try to pick a good English voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferred = voices.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
+      || voices.find(v => v.lang.startsWith('en-') && v.localService)
+      || voices.find(v => v.lang.startsWith('en'));
+    if (preferred) utterance.voice = preferred;
+    utterance.onend = () => resolve();
+    utterance.onerror = () => resolve();
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+/**
+ * Smart speak: tries ElevenLabs first, falls back to browser TTS
+ */
+export async function smartSpeak(text: string): Promise<void> {
+  try {
+    const audioBuffer = await textToSpeech(text);
+    await playAudio(audioBuffer);
+  } catch {
+    console.log('⚡ Using browser TTS fallback');
+    await speakWithBrowser(text);
+  }
 }
 
 // Available voices

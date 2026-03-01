@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Mic, X, Sparkles, Volume2, Settings } from 'lucide-react';
+import { Mic, X, Sparkles, Volume2, Settings, Send } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { chatWithGemini, extractAction, resetConversation } from '../lib/geminiService';
 import { executeAction, VoiceActionContext } from '../lib/voiceActionEngine';
-import { textToSpeech, playAudio } from '../lib/elevenlabsService';
+import { smartSpeak } from '../lib/elevenlabsService';
 import { initVAD, stopVAD } from '../lib/voiceActivityDetection';
 import {
   hasTrainedModel,
@@ -37,6 +37,9 @@ export default function GenniePro() {
   const [currentTranscript, setCurrentTranscript] = useState('');
   const [wakeWordReady, setWakeWordReady] = useState(false);
   const [showWakeWordSetup, setShowWakeWordSetup] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [micSupported, setMicSupported] = useState(true);
+  const [vadSupported, setVadSupported] = useState(true);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
@@ -69,10 +72,7 @@ export default function GenniePro() {
     try {
       setIsSpeaking(true);
       console.log('🔊 Gennie speaking:', text);
-
-      const audioBuffer = await textToSpeech(text);
-      await playAudio(audioBuffer);
-
+      await smartSpeak(text);
       setIsSpeaking(false);
       console.log('✅ Finished speaking');
     } catch (error) {
@@ -149,16 +149,17 @@ export default function GenniePro() {
     }
   }, [user, navigate, addGenieMessage]);
 
-  // Initialize Speech Recognition (only for transcription)
+  // Initialize Speech Recognition (supports Chrome, Edge, Safari, etc.)
   useEffect(() => {
-    if (!('webkitSpeechRecognition' in window)) {
-      console.error('Speech recognition not supported');
+    const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
+      console.warn('Speech recognition not supported in this browser');
+      setMicSupported(false);
       return;
     }
 
-    const SpeechRecognition = (window as any).webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    recognitionRef.current.continuous = false; // NOT continuous - we control when it runs
+    recognitionRef.current = new SpeechRecognitionAPI();
+    recognitionRef.current.continuous = false;
     recognitionRef.current.interimResults = true;
     recognitionRef.current.lang = 'en-US';
 
@@ -324,7 +325,8 @@ export default function GenniePro() {
         setAudioLevel(volume);
       }
     }).catch(error => {
-      console.error('Failed to initialize VAD:', error);
+      console.warn('VAD not available (mic denied or unsupported):', error);
+      setVadSupported(false);
     });
 
     return () => {
@@ -339,6 +341,7 @@ export default function GenniePro() {
   const handleClose = () => {
     setIsOpen(false);
     setMessages([]);
+    setTextInput('');
     resetConversation();
     stopVAD();
   };
@@ -346,6 +349,56 @@ export default function GenniePro() {
   const handleOpen = () => {
     setIsOpen(true);
     addGenieMessage("Hi! I'm Gennie, your ChargeNet assistant. How can I help you?");
+  };
+
+  // Manual tap-to-speak for mobile / when VAD doesn't work
+  const handleManualMic = () => {
+    if (!recognitionRef.current || isProcessing || isSpeaking) return;
+    if (isRecognitionActive.current) {
+      // Already listening — stop it
+      try { recognitionRef.current.stop(); } catch {}
+      return;
+    }
+    try {
+      recognitionRef.current.start();
+      isRecognitionActive.current = true;
+      setIsUserSpeaking(true);
+
+      // Auto-stop after recognition ends and process
+      const origOnEnd = recognitionRef.current.onend;
+      recognitionRef.current.onend = () => {
+        isRecognitionActive.current = false;
+        setIsUserSpeaking(false);
+        setCurrentTranscript('');
+
+        setTimeout(async () => {
+          if (pendingTranscript.current.trim() && !isSpeaking) {
+            const text = pendingTranscript.current.trim();
+            pendingTranscript.current = '';
+            addUserMessage(text);
+            setIsProcessing(true);
+            await processCommand(text);
+            setIsProcessing(false);
+          }
+        }, 300);
+        // Restore original
+        if (recognitionRef.current) recognitionRef.current.onend = origOnEnd;
+      };
+    } catch {
+      console.log('Could not start recognition');
+    }
+  };
+
+  // Text input submit
+  const handleTextSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const text = textInput.trim();
+    if (!text || isProcessing) return;
+    setTextInput('');
+    addUserMessage(text);
+    setIsProcessing(true);
+    await processCommand(text);
+    setIsProcessing(false);
   };
 
   return (
@@ -477,32 +530,65 @@ export default function GenniePro() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Voice Visualizer */}
-          <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
-            <div className="text-center space-y-3">
-              {/* Audio Level Visualizer */}
-              <div className="flex items-center justify-center gap-1 h-12">
+          {/* Input Area — voice + text */}
+          <div className="p-3 border-t border-gray-200 bg-white rounded-b-2xl">
+            {/* Audio Level Visualizer (only when speaking) */}
+            {(isUserSpeaking || isSpeaking) && (
+              <div className="flex items-center justify-center gap-1 h-8 mb-2">
                 {[...Array(5)].map((_, i) => {
                   const height = isUserSpeaking 
-                    ? Math.min(48, (audioLevel / 100) * 48 * (1 - Math.abs(i - 2) * 0.2))
-                    : 8;
+                    ? Math.min(32, (audioLevel / 100) * 32 * (1 - Math.abs(i - 2) * 0.2))
+                    : 6;
                   return (
                     <div
                       key={i}
-                      className="w-2 bg-purple-600 rounded-full transition-all duration-100"
+                      className="w-1.5 bg-purple-600 rounded-full transition-all duration-100"
                       style={{ height: `${height}px` }}
                     />
                   );
                 })}
               </div>
-              
-              <p className="text-sm text-gray-600">
-                {isSpeaking ? '🔊 Speaking...' : isUserSpeaking ? '🎤 Listening to you...' : '👂 Ready to listen'}
-              </p>
-              <p className="text-xs text-gray-400">
-                Just speak naturally • Say "goodbye" to close
-              </p>
-            </div>
+            )}
+
+            {/* Status line */}
+            <p className="text-xs text-gray-400 text-center mb-2">
+              {isSpeaking ? '🔊 Speaking...' : isUserSpeaking ? '🎤 Listening...' : isProcessing ? '🤔 Thinking...' : vadSupported ? '👂 Speak or type below' : '⌨️ Type your message'}
+            </p>
+
+            {/* Text input + mic + send */}
+            <form onSubmit={handleTextSubmit} className="flex items-center gap-2">
+              <input
+                type="text"
+                value={textInput}
+                onChange={e => setTextInput(e.target.value)}
+                placeholder="Type a message..."
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                disabled={isProcessing || isSpeaking}
+              />
+              {micSupported && (
+                <button
+                  type="button"
+                  onClick={handleManualMic}
+                  disabled={isProcessing || isSpeaking}
+                  className={`p-2 rounded-full transition-all ${
+                    isUserSpeaking 
+                      ? 'bg-red-500 text-white animate-pulse' 
+                      : 'bg-purple-100 text-purple-600 hover:bg-purple-200'
+                  } disabled:opacity-50`}
+                  title="Tap to speak"
+                >
+                  <Mic className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                type="submit"
+                disabled={!textInput.trim() || isProcessing || isSpeaking}
+                className="p-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-full disabled:opacity-50 hover:shadow-md transition-all"
+                title="Send"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </form>
           </div>
         </div>
       )}
