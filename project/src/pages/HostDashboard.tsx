@@ -1946,18 +1946,18 @@ const HostDashboard = () => {
                 
                 {/* Progress Bar with Milestones */}
                 <div className="mt-6 bg-white p-6 rounded-xl border border-gray-200">
-                  <div className="flex justify-between items-center mb-3">
+                  <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h5 className="text-lg font-bold text-gray-900">Carbon Credits Journey</h5>
-                    <button className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors border border-green-200">
+                    <button className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-2 text-green-700 transition-colors hover:bg-green-100">
                       <Leaf className="w-4 h-4" />
                       <span className="font-medium">Go Green</span>
                     </button>
                   </div>
                   
-                  <div className="mb-4">
-                    <div className="flex justify-between items-baseline mb-2">
+                  <div className="mb-5">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                       <p className="text-sm text-gray-600">{carbonStats.carbon_credits_earned} / 5,000 Credits</p>
-                      <div className="text-right">
+                      <div className="text-left sm:text-right">
                         {carbonStats.carbon_credits_earned < 1000 && (
                           <>
                             <p className="text-xs text-gray-500">Next gift at <span className="font-semibold text-gray-700">1,000</span></p>
@@ -1972,13 +1972,13 @@ const HostDashboard = () => {
                         )}
                       </div>
                     </div>
-                    <div className="relative">
-                      <div className="w-full bg-gray-200 rounded-full h-3 mb-6">
+                    <div className="relative h-24">
+                      <div className="absolute left-0 right-0 top-5 h-3 rounded-full bg-gray-200">
                         <div className="bg-gradient-to-r from-green-500 to-blue-500 h-3 rounded-full transition-all duration-500" style={{ width: `${Math.min((carbonStats.carbon_credits_earned / 5000) * 100, 100)}%` }}></div>
                       </div>
                       
                       {/* Milestone Markers */}
-                      <div className="absolute top-0 left-0 right-0 flex justify-between px-0">
+                      <div className="absolute inset-x-0 top-0">
                         {[
                           { value: 1000, position: '20%', label: '1k' },
                           { value: 2000, position: '40%', label: '2k' },
@@ -1986,18 +1986,25 @@ const HostDashboard = () => {
                           { value: 4000, position: '80%', label: '4k' },
                           { value: 5000, position: '100%', label: '5k' }
                         ].map((milestone) => (
-                          <div key={milestone.value} className="flex flex-col items-center" style={{ position: 'absolute', left: milestone.position, transform: 'translateX(-50%)' }}>
-                            <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center mb-1 border-2 border-gray-300 mt-4">
+                          <div
+                            key={milestone.value}
+                            className="absolute flex w-12 flex-col items-center gap-2"
+                            style={{
+                              left: milestone.position,
+                              transform: milestone.value === 5000 ? 'translateX(-100%)' : 'translateX(-50%)'
+                            }}
+                          >
+                            <div className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-gray-300 bg-white shadow-sm">
                               <Gift className="w-5 h-5 text-gray-400" />
                             </div>
-                            <span className="text-xs text-gray-500 font-medium">{milestone.label}</span>
+                            <span className="text-xs font-medium text-gray-500">{milestone.label}</span>
                           </div>
                         ))}
                       </div>
                     </div>
                   </div>
                   
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-8">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-sm text-blue-800">
                       <strong>Keep hosting green energy</strong> to unlock your <strong>1k gift!</strong>
                     </p>
@@ -2005,7 +2012,9 @@ const HostDashboard = () => {
                   
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 mt-4">
                     <div className="flex items-start space-x-3">
-                      <div className="text-2xl">💡</div>
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-700">
+                        <Leaf className="h-5 w-5" />
+                      </div>
                       <div>
                         <h4 className="text-sm font-semibold text-green-800 mb-1">How it works</h4>
                         <p className="text-sm text-green-700">
