@@ -24,6 +24,12 @@ const allowedOrigins = [
   process.env.FRONTEND_URL, // Your Vercel/Netlify URL
 ].filter(Boolean); // Remove undefined values
 
+const sessionCookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+};
+
 const io = new Server(server, {
   cors: {
     origin: allowedOrigins,
@@ -519,7 +525,9 @@ const authenticateToken = async (req, res, next) => {
     next();
   } catch (error) {
     console.log('❌ Authentication failed:', error.message);
-    return res.status(403).json({ error: 'Invalid or expired session' });
+    // Clear the stale cookie so browser stops sending it
+    res.clearCookie('chargenet_session', sessionCookieOptions);
+    return res.status(403).json({ error: 'Invalid or expired session', clearSession: true });
   }
 };
 
@@ -528,6 +536,13 @@ const authenticateToken = async (req, res, next) => {
 // Health check
 app.get('/', (req, res) => {
   res.json({ message: 'ChargeNet API is running!', timestamp: new Date().toISOString() });
+});
+
+// Public endpoint to force-clear session cookie (no auth required)
+app.get('/api/auth/clear-session', (req, res) => {
+  res.clearCookie('chargenet_session', sessionCookieOptions);
+  console.log('🧹 Session cookie cleared via public endpoint');
+  res.json({ message: 'Session cleared successfully' });
 });
 
 // Session Management Helper Functions
@@ -655,9 +670,7 @@ app.post('/api/auth/register', async (req, res) => {
 
     // Set HTTP-only cookie for session persistence
     res.cookie('chargenet_session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      ...sessionCookieOptions,
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
@@ -706,9 +719,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Set HTTP-only cookie for session persistence
     res.cookie('chargenet_session', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      ...sessionCookieOptions,
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
 
@@ -757,7 +768,7 @@ app.get('/api/auth/session', async (req, res) => {
     });
   } catch (error) {
     // Session invalid or expired
-    res.clearCookie('chargenet_session');
+    res.clearCookie('chargenet_session', sessionCookieOptions);
     res.json({ user: null });
   }
 });
@@ -778,7 +789,7 @@ app.post('/api/auth/logout', authenticateToken, async (req, res) => {
     }
     
     // Clear the session cookie
-    res.clearCookie('chargenet_session');
+    res.clearCookie('chargenet_session', sessionCookieOptions);
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
@@ -791,7 +802,7 @@ app.post('/api/auth/logout-all', authenticateToken, async (req, res) => {
   try {
     await destroyAllUserSessions(req.user.userId);
     // Clear the session cookie
-    res.clearCookie('chargenet_session');
+    res.clearCookie('chargenet_session', sessionCookieOptions);
     res.json({ message: 'Logged out from all devices successfully' });
   } catch (error) {
     console.error('Logout all error:', error);
@@ -2103,14 +2114,15 @@ app.post('/api/rescue-requests/:id/cancel', authenticateToken, async (req, res) 
     request.cancelled_at = new Date();
     await request.save();
 
-    // Notify host if accepted (broadcast + specific host)
+    // Notify rescue lists immediately, including pending requests visible to hosts.
+    io.emit('rescue-cancelled', {
+      type: 'rescue-cancelled',
+      request: request,
+      request_id: request._id
+    });
+
+    // Notify accepted host directly as well.
     if (request.accepted_by) {
-      io.emit('rescue-cancelled', {
-        type: 'rescue-cancelled',
-        request: request,
-        request_id: request._id
-      });
-      
       io.to(`user-${request.accepted_by}`).emit('rescue-cancelled', {
         type: 'rescue-cancelled',
         request: request,
@@ -2870,6 +2882,16 @@ io.on('connection', (socket) => {
   socket.on('join-location-room', (location) => {
     socket.join(`location-${location}`);
     console.log(`📍 Client joined location room: ${location}`);
+  });
+
+  // Handle host live location updates for emergency rescue
+  socket.on('host-location-update', (data) => {
+    console.log(`🛰️ Live Location Update for Request ${data.requestId}:`, data.lat, data.lng);
+    io.emit(`rescue-location-${data.requestId}`, {
+      lat: data.lat,
+      lng: data.lng,
+      timestamp: new Date()
+    });
   });
 });
 

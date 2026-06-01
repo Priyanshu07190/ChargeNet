@@ -1,8 +1,9 @@
 // #
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { MapPin, Star, Zap, Clock, Navigation, Wifi } from 'lucide-react';
+import { MapPin, Star, Zap, Clock, Navigation, Wifi, Phone } from 'lucide-react';
 import { Charger } from '../lib/dataService';
+import { openGoogleMapsNavigation } from '../lib/googleMapsNavigation';
 
 interface ChargerCardProps {
   charger: Charger;
@@ -10,6 +11,20 @@ interface ChargerCardProps {
 }
 
 const ChargerCard: React.FC<ChargerCardProps> = ({ charger, bookingSource = 'driver' }) => {
+  const handleNavigate = () => {
+    if (!charger.coordinates) {
+      alert('Navigation is not available because this charger does not have map coordinates.');
+      return;
+    }
+
+    openGoogleMapsNavigation(charger.coordinates, {
+      label: charger.name,
+      onMissingDestination: () => {
+        alert('Navigation is not available because this charger has invalid map coordinates.');
+      },
+    });
+  };
+
   const getPriceColor = (price: number) => {
     if (price < 8) return 'text-green-600 bg-green-50';
     if (price < 12) return 'text-orange-600 bg-orange-50';
@@ -23,17 +38,17 @@ const ChargerCard: React.FC<ChargerCardProps> = ({ charger, bookingSource = 'dri
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 border border-gray-100 overflow-hidden">
+    <div className="surface-panel-strong overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_26px_80px_rgba(15,23,42,0.12)]">
       {/* Header */}
       <div className="relative">
-        <div className="h-48 bg-gradient-to-br from-blue-400 to-green-400"></div>
+        <div className="h-48 bg-[linear-gradient(135deg,#0f766e_0%,#2563eb_70%,#f59e0b_140%)]"></div>
         <div className="absolute top-4 right-4">
           <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getAvailabilityColor(charger.available)}`}>
             {charger.available ? 'Available' : 'Unavailable'}
           </span>
         </div>
         <div className="absolute bottom-4 left-4 text-white">
-          <h3 className="text-xl font-bold mb-1">{charger.name}</h3>
+          <h3 className="mb-1 text-xl font-semibold tracking-tight">{charger.name}</h3>
           <div className="flex items-center space-x-1 text-sm opacity-90">
             <MapPin className="h-4 w-4" />
             <span>{charger.distance}km away</span>
@@ -49,7 +64,7 @@ const ChargerCard: React.FC<ChargerCardProps> = ({ charger, bookingSource = 'dri
             <span className="font-semibold">{charger.rating}</span>
             <span className="text-gray-500 text-sm">({charger.reviews} reviews)</span>
           </div>
-          <div className={`px-3 py-1 rounded-full text-sm font-medium ${getPriceColor(charger.price)}`}>
+          <div className={`rounded-lg px-3 py-1 text-sm font-semibold ${getPriceColor(charger.price)}`}>
             ₹{charger.price}/kWh
           </div>
         </div>
@@ -82,7 +97,7 @@ const ChargerCard: React.FC<ChargerCardProps> = ({ charger, bookingSource = 'dri
           {charger.host_phone && (
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <span className="text-xs">📞</span>
+                <Phone className="h-4 w-4 text-slate-500" />
                 <span className="text-sm text-gray-600">Contact</span>
               </div>
               <span className="text-sm font-medium">{charger.host_phone}</span>
@@ -111,20 +126,25 @@ const ChargerCard: React.FC<ChargerCardProps> = ({ charger, bookingSource = 'dri
                 // Set booking source in sessionStorage for context determination
                 sessionStorage.setItem('bookingSource', bookingSource);
               }}
-              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-xl font-semibold text-center hover:from-blue-600 hover:to-blue-700 transition-all"
+              className="btn-primary flex-1 px-4 py-3 text-center"
             >
               Book Now
             </Link>
           ) : (
             <button 
               disabled
-              className="flex-1 bg-gray-400 text-gray-200 px-4 py-3 rounded-xl font-semibold text-center cursor-not-allowed"
+              className="flex-1 cursor-not-allowed rounded-lg bg-slate-300 px-4 py-3 text-center font-semibold text-slate-500"
               title="This charger is currently unavailable"
             >
               Unavailable
             </button>
           )}
-          <button className="px-4 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+          <button
+            type="button"
+            onClick={handleNavigate}
+            className="btn-secondary px-4 py-3"
+            title="Open Google Maps navigation"
+          >
             <Navigation className="h-5 w-5 text-gray-600" />
           </button>
         </div>

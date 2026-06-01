@@ -42,6 +42,9 @@ function AppContent() {
   // Includes query and hash to fully restore stateful URLs
   useEffect(() => {
     const fullPath = `${location.pathname}${location.search}${location.hash}`;
+    if (location.pathname === '/login' || location.pathname === '/register') {
+      return;
+    }
     try {
       localStorage.setItem('lastRoute', fullPath);
     } catch (_) {

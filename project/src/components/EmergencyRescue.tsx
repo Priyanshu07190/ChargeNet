@@ -1,8 +1,131 @@
 // #
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, MapPin, Loader } from 'lucide-react';
+import { AlertTriangle, MapPin, Loader, Trash2, X } from 'lucide-react';
 import { authService } from '../lib/auth';
 import socketService from '../lib/socketService';
+import LocationPicker from './LocationPicker';
+
+// Always use the same backend URL as apiService (env var → production or localhost)
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+
+// Helper: clear stale session without causing a redirect loop
+const clearStaleSession = async () => {
+  try {
+    await fetch(`${API_BASE}/api/auth/clear-session`, { credentials: 'include' });
+  } catch (_) { /* ignore */ }
+  await authService.signOut();
+};
+
+interface ActiveRescueMapProps {
+  requestId: string;
+  driverCoords: { lat: number; lng: number };
+  initialHostCoords?: { lat: number; lng: number } | null;
+}
+
+const ActiveRescueMap: React.FC<ActiveRescueMapProps> = ({ requestId, driverCoords, initialHostCoords }) => {
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+  const mapInstanceRef = React.useRef<any>(null);
+  const driverMarkerRef = React.useRef<any>(null);
+  const hostMarkerRef = React.useRef<any>(null);
+  const [hostCoords, setHostCoords] = useState<{ lat: number; lng: number } | null>(initialHostCoords || null);
+
+  useEffect(() => {
+    // Listen for host location updates via WebSocket
+    const handleHostLocationUpdate = (data: any) => {
+      console.log("🛰️ Driver map received host location update:", data);
+      setHostCoords({ lat: data.lat, lng: data.lng });
+    };
+
+    socketService.on(`rescue-location-${requestId}`, handleHostLocationUpdate);
+
+    return () => {
+      socketService.off(`rescue-location-${requestId}`, handleHostLocationUpdate);
+    };
+  }, [requestId]);
+
+  // Initialize map
+  useEffect(() => {
+    if (mapContainerRef.current && !mapInstanceRef.current && window.L) {
+      const L = window.L;
+
+      // Initialize map centered at driver
+      mapInstanceRef.current = L.map(mapContainerRef.current).setView([driverCoords.lat, driverCoords.lng], 14);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(mapInstanceRef.current);
+
+      // Create Driver Marker (Red)
+      const redIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+
+      driverMarkerRef.current = L.marker([driverCoords.lat, driverCoords.lng], { icon: redIcon })
+        .addTo(mapInstanceRef.current)
+        .bindPopup('🚨 Your Stranded Location')
+        .openPopup();
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        driverMarkerRef.current = null;
+        hostMarkerRef.current = null;
+      }
+    };
+  }, [driverCoords]);
+
+  // Update or create Host Marker when hostCoords changes
+  useEffect(() => {
+    if (mapInstanceRef.current && window.L && hostCoords) {
+      const L = window.L;
+
+      const blueIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+
+      if (hostMarkerRef.current) {
+        // Move existing marker
+        hostMarkerRef.current.setLatLng([hostCoords.lat, hostCoords.lng]);
+      } else {
+        // Create new marker
+        hostMarkerRef.current = L.marker([hostCoords.lat, hostCoords.lng], { icon: blueIcon })
+          .addTo(mapInstanceRef.current)
+          .bindPopup('🚗 Rescue Host Approaching')
+          .openPopup();
+      }
+
+      // Fit bounds to show both markers
+      const bounds = L.latLngBounds([
+        [driverCoords.lat, driverCoords.lng],
+        [hostCoords.lat, hostCoords.lng]
+      ]);
+      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [hostCoords, driverCoords]);
+
+  return (
+    <div className="relative rounded-xl overflow-hidden border border-gray-300 mt-4 h-64 shadow-inner">
+      <div ref={mapContainerRef} className="w-full h-full" style={{ minHeight: '250px' }} />
+      {!hostCoords && (
+        <div className="absolute inset-0 bg-black bg-opacity-35 flex items-center justify-center text-white text-sm font-semibold px-4 text-center">
+          ⏳ Waiting for Host to start live location sharing...
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface RescueRequest {
   _id: string;
@@ -28,6 +151,8 @@ const EmergencyRescue: React.FC = () => {
   const [showSOSModal, setShowSOSModal] = useState(false);
   const [myRequests, setMyRequests] = useState<RescueRequest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
+  const [detectingLocation, setDetectingLocation] = useState(false);
   const [rescueForm, setRescueForm] = useState({
     location_name: '',
     coordinates: { lat: 0, lng: 0 },
@@ -39,12 +164,17 @@ const EmergencyRescue: React.FC = () => {
   // Load ONLY user's own rescue requests (not requests from others)
   const loadMyRequests = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/rescue-requests/my-requests', {
+      const response = await fetch(`${API_BASE}/api/rescue-requests/my-requests`, {
         headers: {
           'Authorization': `Bearer ${authService.getCurrentToken()}`
         },
         credentials: 'include'
       });
+      // On 403, silently skip — user will be prompted when they try to submit SOS
+      if (response.status === 403) {
+        console.warn('⚠️ 403 on my-requests — skipping silently');
+        return;
+      }
       if (response.ok) {
         const data = await response.json();
         setMyRequests(data.requests || []);
@@ -53,6 +183,7 @@ const EmergencyRescue: React.FC = () => {
       console.error('Error loading my rescue requests:', error);
     }
   };
+
 
   useEffect(() => {
     // Load initial data
@@ -91,25 +222,62 @@ const EmergencyRescue: React.FC = () => {
     };
   }, []);
 
-  // Get current location
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
+  // Get current location with reverse geocoding
+  const getCurrentLocation = async () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setRescueForm(prev => ({
+          ...prev,
+          coordinates: { lat: latitude, lng: longitude }
+        }));
+
+        try {
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.display_name) {
+              setRescueForm(prev => ({
+                ...prev,
+                location_name: data.display_name
+              }));
+            } else {
+              setRescueForm(prev => ({
+                ...prev,
+                location_name: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+              }));
+            }
+          } else {
+            setRescueForm(prev => ({
+              ...prev,
+              location_name: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
+            }));
+          }
+        } catch (error) {
+          console.error('Error reverse geocoding:', error);
           setRescueForm(prev => ({
             ...prev,
-            coordinates: {
-              lat: position.coords.latitude,
-              lng: position.coords.longitude
-            }
+            location_name: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`
           }));
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          alert('Please enable location services to create a rescue request');
+        } finally {
+          setDetectingLocation(false);
         }
-      );
-    }
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        alert('Please enable location services to auto-detect your location');
+        setDetectingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   // Create SOS rescue request
@@ -121,7 +289,7 @@ const EmergencyRescue: React.FC = () => {
 
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:5000/api/rescue-requests', {
+      const response = await fetch(`${API_BASE}/api/rescue-requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -130,6 +298,14 @@ const EmergencyRescue: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify(rescueForm)
       });
+
+      // If session is stale, clear it and tell user to re-login
+      if (response.status === 403) {
+        await clearStaleSession();
+        alert('⚠️ Your session has expired. Please log in again.');
+        // Let AuthContext detect the signed-out state and redirect naturally
+        return;
+      }
 
       if (!response.ok) {
         const error = await response.json();
@@ -153,6 +329,45 @@ const EmergencyRescue: React.FC = () => {
       setLoading(false);
     }
   };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!confirm('Delete this emergency request? Hosts will no longer see it as active.')) {
+      return;
+    }
+
+    try {
+      setCancellingRequestId(requestId);
+      const response = await fetch(`${API_BASE}/api/rescue-requests/${requestId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authService.getCurrentToken()}`
+        },
+        credentials: 'include'
+      });
+
+      if (response.status === 403) {
+        await clearStaleSession();
+        alert('Your session has expired. Please log in again.');
+        return;
+      }
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete rescue request');
+      }
+
+      setMyRequests(prev => prev.filter(request => request._id !== requestId));
+      await loadMyRequests();
+      alert('Emergency request deleted.');
+    } catch (error: any) {
+      alert(error.message || 'Failed to delete rescue request');
+    } finally {
+      setCancellingRequestId(null);
+    }
+  };
+
+  const activeRequests = myRequests.filter(req => req.status !== 'completed' && req.status !== 'cancelled');
+
 
   return (
     <div className="space-y-6">
@@ -181,11 +396,11 @@ const EmergencyRescue: React.FC = () => {
       </div>
 
       {/* My Active Requests */}
-      {myRequests.length > 0 && (
+      {activeRequests.length > 0 && (
         <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
           <h4 className="text-xl font-bold text-gray-900 mb-4">Your Rescue Requests</h4>
           <div className="space-y-4">
-            {myRequests.filter(req => req.status !== 'completed' && req.status !== 'cancelled').map((request) => (
+            {activeRequests.map((request) => (
               <div key={request._id} className="bg-gray-50 border-2 border-gray-200 rounded-xl p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div>
@@ -197,7 +412,23 @@ const EmergencyRescue: React.FC = () => {
                       {request.status.toUpperCase()}
                     </span>
                   </div>
-                  <MapPin className="w-5 h-5 text-gray-600" />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteRequest(request._id)}
+                      disabled={cancellingRequestId === request._id}
+                      className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      title="Delete this emergency request"
+                    >
+                      {cancellingRequestId === request._id ? (
+                        <Loader className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                      <span>Delete</span>
+                    </button>
+                    <MapPin className="w-5 h-5 text-gray-600" />
+                  </div>
                 </div>
 
                 <div className="space-y-2 text-sm">
@@ -251,6 +482,15 @@ const EmergencyRescue: React.FC = () => {
                     </div>
                   )}
                   
+                  
+                  {/* Real-time map tracking when accepted/in-progress */}
+                  {(request.status === 'accepted' || request.status === 'in-progress') && (
+                    <ActiveRescueMap
+                      requestId={request._id}
+                      driverCoords={request.coordinates}
+                    />
+                  )}
+
                   {request.status === 'pending' && (
                     <p className="text-yellow-700 mt-2">⏳ Waiting for a nearby host to accept...</p>
                   )}
@@ -267,22 +507,52 @@ const EmergencyRescue: React.FC = () => {
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">Emergency Rescue Request</h3>
-              <button onClick={() => setShowSOSModal(false)} className="text-gray-400 hover:text-gray-600">
-                ✕
+              <button onClick={() => setShowSOSModal(false)} className="text-gray-400 hover:text-gray-600" aria-label="Close emergency request modal">
+                <X className="h-5 w-5" />
               </button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Your Current Location *</label>
-                <input
-                  type="text"
+                <LocationPicker
+                  label="Your Current Location *"
                   value={rescueForm.location_name}
-                  onChange={(e) => setRescueForm({ ...rescueForm, location_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                  placeholder="e.g., Near ABC Mall, XYZ Road"
-                  required
+                  onChange={(address, coords) => {
+                    setRescueForm(prev => ({
+                      ...prev,
+                      location_name: address,
+                      coordinates: coords || prev.coordinates
+                    }));
+                  }}
+                  placeholder="Enter address or select on map"
                 />
+                
+                {/* Auto-detect button inside the modal */}
+                <div className="flex justify-between items-center mt-2">
+                  <button
+                    type="button"
+                    onClick={getCurrentLocation}
+                    disabled={detectingLocation}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 transition-colors"
+                  >
+                    {detectingLocation ? (
+                      <>
+                        <Loader className="w-3.5 h-3.5 animate-spin" />
+                        <span>Detecting your location...</span>
+                      </>
+                    ) : (
+                      <>
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>📍 Auto-detect My Live Location</span>
+                      </>
+                    )}
+                  </button>
+                  {rescueForm.coordinates.lat !== 0 && (
+                    <span className="text-[10px] text-gray-500">
+                      Coords: {rescueForm.coordinates.lat.toFixed(5)}, {rescueForm.coordinates.lng.toFixed(5)}
+                    </span>
+                  )}
+                </div>
               </div>
 
               <div>

@@ -1,7 +1,7 @@
 // #
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { MapPin, Zap, Clock, Star } from 'lucide-react';
+import { MapPin, Zap, Clock, Star, RefreshCw, Map as MapIcon, List, AlertTriangle } from 'lucide-react';
 import { useCharger } from '../contexts/ChargerContext';
 import ChargerCard from '../components/ChargerCard';
 import MapView from '../components/MapView';
@@ -367,21 +367,23 @@ const ChargerMap = () => {
   return (
     <div className="min-h-screen pt-16">
       {tripMode && (
-        <div className="bg-blue-50 border-b border-blue-200">
-          <div className="max-w-7xl mx-auto px-4 py-2 text-sm text-blue-800">
+        <div className="border-b border-emerald-200 bg-emerald-50">
+          <div className="mx-auto max-w-7xl px-4 py-2 text-sm font-medium text-emerald-900">
             Trip mode: showing chargers along your planned route
           </div>
         </div>
       )}
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+      <div className="border-b border-slate-200/80 bg-white/90 shadow-sm backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 py-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center flex-wrap gap-3 mb-4 md:mb-0">
-              <MapPin className="h-6 w-6 text-blue-500" />
-              <h1 className="text-2xl font-bold text-gray-900">Find Chargers</h1>
+              <div className="icon-tile">
+                <MapPin className="h-5 w-5 text-emerald-700" />
+              </div>
+              <h1 className="section-title">Find Chargers</h1>
               {userLocation ? (
-                <div className="bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg text-green-800 text-xs md:text-sm flex flex-col max-w-xs md:max-w-sm">
+                <div className="flex max-w-xs flex-col rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs text-emerald-900 md:max-w-sm md:text-sm">
                   <div className="flex items-center flex-wrap gap-1">
                     <div className={`w-2 h-2 rounded-full ${locationAccuracy && locationAccuracy < 40 ? 'bg-green-500' : 'bg-yellow-500'} mr-1`}></div>
                     <span className="font-medium">{userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)}</span>
@@ -401,42 +403,45 @@ const ChargerMap = () => {
                   )}
                 </div>
               ) : (
-                <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm animate-pulse">
+                <span className="animate-pulse rounded-lg bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
                   Getting location...
                 </span>
               )}
               {/* Improve Accuracy button removed per request; address moved under coordinates */}
             </div>
             
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-3">
               {/* Manual Location Refresh Button */}
               <button
                 onClick={refreshMyLocation}
                 disabled={isRefreshing}
-                className={`px-3 py-2 rounded-lg text-sm font-medium border transition-all flex items-center gap-1 ${
+                className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/30 ${
                   isRefreshing
-                    ? 'bg-blue-200 text-blue-600 border-blue-300 cursor-wait'
-                    : 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200'
+                    ? 'cursor-wait border-emerald-200 bg-emerald-100 text-emerald-700'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
                 }`}
                 title="Fast refresh (quick dual-attempt)"
               >
                 {isRefreshing ? (
                   <>
-                    <span className="animate-spin inline-block w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full"></span>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
                     Refreshing
                   </>
                 ) : (
-                  <>🔄 Refresh</>
+                  <>
+                    <RefreshCw className="h-4 w-4" />
+                    Refresh
+                  </>
                 )}
               </button>
               
               {/* Real-time Location Tracking Toggle */}
               <button
                 onClick={isTrackingLocation ? stopLocationTracking : startLocationTracking}
-                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`inline-flex min-h-11 items-center rounded-lg border px-3 py-2 text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/30 ${
                   isTrackingLocation 
-                    ? 'bg-green-100 text-green-800 border border-green-300' 
-                    : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                    ? 'border-emerald-300 bg-emerald-100 text-emerald-800' 
+                    : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                 }`}
                 title={isTrackingLocation ? 'Stop real-time location tracking' : 'Start real-time location tracking'}
               >
@@ -446,29 +451,34 @@ const ChargerMap = () => {
                     Live Tracking
                   </>
                 ) : (
-                  '📍 Track Location'
+                  <>
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Track Location
+                  </>
                 )}
               </button>
 
-              <div className="flex bg-gray-100 rounded-lg p-1">
+              <div className="segmented-control">
                 <button
                   onClick={() => setViewMode('map')}
-                  className={`px-4 py-2 rounded-md transition-all ${
+                  className={`segmented-button inline-flex items-center gap-2 ${
                     viewMode === 'map' 
-                      ? 'bg-white shadow-sm text-blue-600' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'segmented-button-active' 
+                      : ''
                   }`}
                 >
+                  <MapIcon className="h-4 w-4" />
                   Map View
                 </button>
                 <button
                   onClick={() => setViewMode('list')}
-                  className={`px-4 py-2 rounded-md transition-all ${
+                  className={`segmented-button inline-flex items-center gap-2 ${
                     viewMode === 'list' 
-                      ? 'bg-white shadow-sm text-blue-600' 
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'segmented-button-active' 
+                      : ''
                   }`}
                 >
+                  <List className="h-4 w-4" />
                   List View
                 </button>
               </div>
@@ -477,15 +487,16 @@ const ChargerMap = () => {
           
           {/* Filter Bar */}
           {showAccuracyWarning && (
-            <div className="mx-4 mt-3 mb-1 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded text-xs flex items-center gap-2">
-              <span>⚠️ Your location accuracy is currently poor (±{locationAccuracy && Math.round(locationAccuracy)}m). Move outside or tap "Improve Accuracy".</span>
+            <div className="mx-4 mb-1 mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-xs font-medium text-amber-800">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>Your location accuracy is currently poor (±{locationAccuracy && Math.round(locationAccuracy)}m). Move outside or refresh location.</span>
             </div>
           )}
-          <div className="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg">
+          <div className="mt-4 flex flex-wrap gap-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
             <select
               value={filters.plugType}
               onChange={(e) => setFilters({...filters, plugType: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="select-modern"
             >
               <option value="all">All Plug Types</option>
               <option value="Type 2">Type 2</option>
@@ -496,7 +507,7 @@ const ChargerMap = () => {
             <select
               value={filters.availability}
               onChange={(e) => setFilters({...filters, availability: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="select-modern"
             >
               <option value="all">All Chargers</option>
               <option value="true">Available Now</option>
@@ -506,7 +517,7 @@ const ChargerMap = () => {
             <select
               value={filters.rating}
               onChange={(e) => setFilters({...filters, rating: e.target.value})}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="select-modern"
             >
               <option value="all">All Ratings</option>
               <option value="4">4+ Stars</option>
@@ -531,7 +542,7 @@ const ChargerMap = () => {
           <div className="max-w-7xl mx-auto px-4 py-6">
             {loading ? (
               <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                <div className="h-12 w-12 animate-spin rounded-full border-2 border-slate-200 border-t-emerald-700"></div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -545,7 +556,7 @@ const ChargerMap = () => {
       </div>
 
       {/* Quick Stats */}
-      <div className="bg-white border-t">
+      <div className="border-t border-slate-200 bg-white/90 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex flex-wrap justify-center gap-8 text-center">
             <div className="flex items-center space-x-2">

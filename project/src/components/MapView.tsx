@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Navigation, Route, Target } from 'lucide-react';
 import { Charger } from '../lib/dataService';
 import { useCharger } from '../contexts/ChargerContext';
+import { openGoogleMapsNavigation } from '../lib/googleMapsNavigation';
 
 // Extend Window interface to include Leaflet
 declare global {
@@ -436,6 +437,18 @@ const MapView: React.FC<MapViewProps> = ({ chargers, userLocation, loading, rout
 
   // OSRM routing integration (100% free)
   const getDirections = async (_chargerId: string, destLat: number, destLng: number) => {
+    openGoogleMapsNavigation(
+      { lat: destLat, lng: destLng },
+      {
+        origin: userLocation,
+        label: 'charger',
+        onMissingDestination: () => {
+          alert('Navigation is not available because this charger has invalid map coordinates.');
+        },
+      }
+    );
+    return;
+
     if (!userLocation || !mapInstanceRef.current) {
       alert('Please enable location to get directions');
       return;

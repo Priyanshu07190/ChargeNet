@@ -1,8 +1,411 @@
 // #
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, MapPin, Phone, Navigation as NavigationIcon, DollarSign, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { AlertTriangle, MapPin, Phone, Navigation as NavigationIcon, DollarSign, X, ChevronRight } from 'lucide-react';
 import { authService } from '../lib/auth';
 import socketService from '../lib/socketService';
+
+// Always use the same backend URL as apiService (env var → production or localhost)
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+
+const buildGoogleMapsNavigationUrl = (
+  destination: { lat: number; lng: number },
+  origin?: { lat: number; lng: number }
+) => {
+  const params = new URLSearchParams({
+    api: '1',
+    destination: `${destination.lat},${destination.lng}`,
+    travelmode: 'driving',
+    dir_action: 'navigate',
+  });
+
+  if (origin) {
+    params.set('origin', `${origin.lat},${origin.lng}`);
+  }
+
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+};
+
+const openGoogleMapsNavigation = (
+  destination: { lat: number; lng: number },
+  locationName: string
+) => {
+  const openMaps = (origin?: { lat: number; lng: number }) => {
+    const url = buildGoogleMapsNavigationUrl(destination, origin);
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      window.location.href = url;
+    }
+  };
+
+  if (!navigator.geolocation) {
+    openMaps();
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      openMaps({
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+    },
+    () => {
+      console.warn(`Opening Google Maps without origin for ${locationName}`);
+      openMaps();
+    },
+    { enableHighAccuracy: true, timeout: 7000, maximumAge: 30000 }
+  );
+};
+
+// ─── In-App Navigation Modal ──────────────────────────────────────────────────
+interface NavigationModalProps {
+  destination: { lat: number; lng: number; name: string };
+  onClose: () => void;
+}
+
+const NavigationModal: React.FC<NavigationModalProps> = ({ destination, onClose }) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<any>(null);
+  const routeLayerRef = useRef<any>(null);
+  const hostMarkerRef = useRef<any>(null);
+  const watchIdRef = useRef<number | null>(null);
+  const [hostCoords, setHostCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [routeInfo, setRouteInfo] = useState<{ distance: string; duration: string } | null>(null);
+  const [status, setStatus] = useState<'locating' | 'routing' | 'ready' | 'error'>('locating');
+
+  // Fetch real road route from OSRM
+  const fetchRoute = async (from: { lat: number; lng: number }, to: { lat: number; lng: number }) => {
+    try {
+      setStatus('routing');
+      const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.routes && data.routes.length > 0) {
+        const route = data.routes[0];
+        const distanceKm = (route.distance / 1000).toFixed(1);
+        const durationMin = Math.ceil(route.duration / 60);
+        setRouteInfo({ distance: `${distanceKm} km`, duration: `${durationMin} min` });
+
+        const L = window.L;
+        if (routeLayerRef.current) mapInstanceRef.current.removeLayer(routeLayerRef.current);
+        routeLayerRef.current = L.geoJSON(route.geometry, {
+          style: { color: '#3b82f6', weight: 5, opacity: 0.85, dashArray: '8,4' }
+        }).addTo(mapInstanceRef.current);
+
+        // Fit map to route
+        mapInstanceRef.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [40, 40] });
+        setStatus('ready');
+      }
+    } catch (e) {
+      console.error('Route fetch error:', e);
+      // Fallback: draw straight line
+      const L = window.L;
+      if (routeLayerRef.current) mapInstanceRef.current.removeLayer(routeLayerRef.current);
+      routeLayerRef.current = L.polyline([[from.lat, from.lng], [to.lat, to.lng]], {
+        color: '#3b82f6', weight: 4, dashArray: '8,4'
+      }).addTo(mapInstanceRef.current);
+      mapInstanceRef.current.fitBounds(routeLayerRef.current.getBounds(), { padding: [40, 40] });
+      setStatus('ready');
+    }
+  };
+
+  // Init map + get host location
+  useEffect(() => {
+    if (!mapRef.current || !window.L) return;
+    const L = window.L;
+
+    mapInstanceRef.current = L.map(mapRef.current).setView(
+      [destination.lat, destination.lng], 13
+    );
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '\u00a9 OpenStreetMap contributors'
+    }).addTo(mapInstanceRef.current);
+
+    // Driver destination marker (Red)
+    const redIcon = L.icon({
+      iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+      shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+      iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+    });
+    L.marker([destination.lat, destination.lng], { icon: redIcon })
+      .addTo(mapInstanceRef.current)
+      .bindPopup(`\ud83d\udea8 ${destination.name}`)
+      .openPopup();
+
+    // Get host location
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const from = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setHostCoords(from);
+
+        const greenIcon = L.icon({
+          iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+          shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+          iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
+        });
+        hostMarkerRef.current = L.marker([from.lat, from.lng], { icon: greenIcon })
+          .addTo(mapInstanceRef.current)
+          .bindPopup('\ud83d\udeb6 Your Location');
+
+        fetchRoute(from, destination);
+
+        // Live tracking
+        watchIdRef.current = navigator.geolocation.watchPosition((p) => {
+          const updated = { lat: p.coords.latitude, lng: p.coords.longitude };
+          setHostCoords(updated);
+          hostMarkerRef.current?.setLatLng([updated.lat, updated.lng]);
+          fetchRoute(updated, destination);
+        }, undefined, { enableHighAccuracy: true });
+      },
+      () => setStatus('error'),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+
+    return () => {
+      if (watchIdRef.current !== null) navigator.geolocation.clearWatch(watchIdRef.current);
+      mapInstanceRef.current?.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-gray-950">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-700 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center">
+            <NavigationIcon className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <p className="text-white font-bold text-sm">Navigating to Driver</p>
+            <p className="text-gray-400 text-xs truncate max-w-[200px]">{destination.name}</p>
+          </div>
+        </div>
+        <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center hover:bg-gray-600 transition">
+          <X className="w-4 h-4 text-white" />
+        </button>
+      </div>
+
+      {/* Route info bar */}
+      {routeInfo && (
+        <div className="flex items-center justify-around bg-blue-600 px-4 py-2">
+          <div className="text-center">
+            <p className="text-white font-bold text-lg">{routeInfo.distance}</p>
+            <p className="text-blue-200 text-xs">Distance</p>
+          </div>
+          <div className="w-px h-8 bg-blue-400" />
+          <div className="text-center">
+            <p className="text-white font-bold text-lg">{routeInfo.duration}</p>
+            <p className="text-blue-200 text-xs">ETA</p>
+          </div>
+          <div className="w-px h-8 bg-blue-400" />
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-full bg-green-400 animate-pulse" />
+            <p className="text-blue-200 text-xs">Live GPS</p>
+          </div>
+        </div>
+      )}
+
+      {/* Status messages */}
+      {status === 'locating' && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-950 bg-opacity-80">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-white font-semibold">Getting your location...</p>
+          </div>
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-950 bg-opacity-80">
+          <div className="text-center px-6">
+            <p className="text-red-400 text-4xl mb-3">⚠️</p>
+            <p className="text-white font-semibold mb-2">Location access denied</p>
+            <p className="text-gray-400 text-sm">Please allow location access in your browser settings.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Map fills remaining space */}
+      <div ref={mapRef} className="flex-1 w-full" />
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-6 bg-gray-900 py-2 border-t border-gray-700">
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-green-500" />
+          <span className="text-gray-300 text-xs">You</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-full bg-red-500" />
+          <span className="text-gray-300 text-xs">Driver</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-8 h-0.5 bg-blue-400" style={{ borderTop: '2px dashed #3b82f6', background: 'none' }} />
+          <span className="text-gray-300 text-xs">Route</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
+
+interface HostActiveRescueMapProps {
+  requestId: string;
+  driverCoords: { lat: number; lng: number };
+}
+
+const HostActiveRescueMap: React.FC<HostActiveRescueMapProps> = ({ requestId, driverCoords }) => {
+  const mapContainerRef = React.useRef<HTMLDivElement>(null);
+  const mapInstanceRef = React.useRef<any>(null);
+  const driverMarkerRef = React.useRef<any>(null);
+  const hostMarkerRef = React.useRef<any>(null);
+  const [hostCoords, setHostCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
+  const watchIdRef = React.useRef<number | null>(null);
+
+  // Start live location sharing
+  const toggleLocationSharing = () => {
+    if (isSharing) {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      setIsSharing(false);
+      setHostCoords(null);
+    } else {
+      if (navigator.geolocation) {
+        setIsSharing(true);
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          (position) => {
+            const { latitude, longitude } = position.coords;
+            console.log("🛰️ Host sharing live location:", latitude, longitude);
+            setHostCoords({ lat: latitude, lng: longitude });
+            socketService.emit('host-location-update', {
+              requestId,
+              lat: latitude,
+              lng: longitude
+            });
+          },
+          (error) => {
+            console.error("Error watchPosition:", error);
+            alert("Failed to access your live GPS location. Please check your browser permissions.");
+            setIsSharing(false);
+          },
+          { enableHighAccuracy: true, timeout: 10000 }
+        );
+      } else {
+        alert("Geolocation is not supported by your browser.");
+      }
+    }
+  };
+
+  // Clean up geolocation watch on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
+  // Initialize Map
+  useEffect(() => {
+    if (mapContainerRef.current && !mapInstanceRef.current && window.L) {
+      const L = window.L;
+
+      mapInstanceRef.current = L.map(mapContainerRef.current).setView([driverCoords.lat, driverCoords.lng], 14);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(mapInstanceRef.current);
+
+      // Driver marker (Red)
+      const redIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+
+      driverMarkerRef.current = L.marker([driverCoords.lat, driverCoords.lng], { icon: redIcon })
+        .addTo(mapInstanceRef.current)
+        .bindPopup('🚨 Stranded Driver Location')
+        .openPopup();
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        driverMarkerRef.current = null;
+        hostMarkerRef.current = null;
+      }
+    };
+  }, [driverCoords]);
+
+  // Update Host Marker
+  useEffect(() => {
+    if (mapInstanceRef.current && window.L && hostCoords) {
+      const L = window.L;
+
+      const blueIcon = L.icon({
+        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+        shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41]
+      });
+
+      if (hostMarkerRef.current) {
+        hostMarkerRef.current.setLatLng([hostCoords.lat, hostCoords.lng]);
+      } else {
+        hostMarkerRef.current = L.marker([hostCoords.lat, hostCoords.lng], { icon: blueIcon })
+          .addTo(mapInstanceRef.current)
+          .bindPopup('🚗 Your Live Location')
+          .openPopup();
+      }
+
+      // Auto fit bounds
+      const bounds = L.latLngBounds([
+        [driverCoords.lat, driverCoords.lng],
+        [hostCoords.lat, hostCoords.lng]
+      ]);
+      mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [hostCoords, driverCoords]);
+
+  return (
+    <div className="mt-4 bg-white rounded-xl p-4 border border-blue-200">
+      <div className="flex items-center justify-between mb-3">
+        <h6 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+          🛰️ Live GPS Location Sharing
+        </h6>
+        <button
+          onClick={toggleLocationSharing}
+          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md ${
+            isSharing 
+              ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+              : 'bg-gradient-to-r from-blue-600 to-green-600 hover:shadow-lg text-white'
+          }`}
+        >
+          {isSharing ? '🔴 Stop Sharing' : '🛰️ Share Live Location'}
+        </button>
+      </div>
+
+      <div className="relative rounded-lg overflow-hidden border border-gray-300 h-64">
+        <div ref={mapContainerRef} className="w-full h-full" style={{ minHeight: '250px' }} />
+        {!isSharing && (
+          <div className="absolute inset-0 bg-black bg-opacity-35 flex items-center justify-center text-white text-xs font-semibold px-4 text-center">
+            📍 Enable live location sharing to track your progress relative to the driver in real-time.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface RescueRequest {
   _id: string;
@@ -28,11 +431,12 @@ const HostRescueRequests: React.FC = () => {
   const [pendingRequests, setPendingRequests] = useState<RescueRequest[]>([]);
   const [acceptedRequests, setAcceptedRequests] = useState<RescueRequest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [navigationTarget, setNavigationTarget] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
   // Load pending rescue requests
   const loadPendingRequests = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/rescue-requests/pending', {
+      const response = await fetch(`${API_BASE}/api/rescue-requests/pending`, {
         headers: {
           'Authorization': `Bearer ${authService.getCurrentToken()}`
         },
@@ -50,7 +454,7 @@ const HostRescueRequests: React.FC = () => {
   // Load accepted rescue requests
   const loadAcceptedRequests = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/rescue-requests/accepted', {
+      const response = await fetch(`${API_BASE}/api/rescue-requests/accepted`, {
         headers: {
           'Authorization': `Bearer ${authService.getCurrentToken()}`
         },
@@ -115,7 +519,7 @@ const HostRescueRequests: React.FC = () => {
   const handleAcceptRequest = async (requestId: string, price: number, estimatedTime: number) => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/rescue-requests/${requestId}/accept`, {
+      const response = await fetch(`${API_BASE}/api/rescue-requests/${requestId}/accept`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +547,7 @@ const HostRescueRequests: React.FC = () => {
   // Reject rescue request
   const handleRejectRequest = async (requestId: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/rescue-requests/${requestId}/reject`, {
+      const response = await fetch(`${API_BASE}/api/rescue-requests/${requestId}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getCurrentToken()}`
@@ -162,16 +566,15 @@ const HostRescueRequests: React.FC = () => {
     }
   };
 
-  // Navigate to rescue location
-  const handleNavigate = (lat: number, lng: number) => {
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
-    window.open(url, '_blank');
+  // Navigate to rescue location in Google Maps, ready for turn-by-turn navigation.
+  const handleNavigate = (lat: number, lng: number, locationName: string) => {
+    openGoogleMapsNavigation({ lat, lng }, locationName);
   };
 
   // Mark rescue as started
   const handleStartRescue = async (requestId: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/rescue-requests/${requestId}/start`, {
+      const response = await fetch(`${API_BASE}/api/rescue-requests/${requestId}/start`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getCurrentToken()}`
@@ -191,7 +594,7 @@ const HostRescueRequests: React.FC = () => {
   // Mark rescue as complete
   const handleCompleteRescue = async (requestId: string) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/rescue-requests/${requestId}/complete`, {
+      const response = await fetch(`${API_BASE}/api/rescue-requests/${requestId}/complete`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${authService.getCurrentToken()}`
@@ -303,9 +706,15 @@ const HostRescueRequests: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex gap-3">
+                {/* Embedded live Leaflet tracking map & GPS sharing */}
+                <HostActiveRescueMap
+                  requestId={request._id}
+                  driverCoords={request.coordinates}
+                />
+
+                <div className="flex gap-3 mt-4">
                   <button
-                    onClick={() => handleNavigate(request.coordinates.lat, request.coordinates.lng)}
+                    onClick={() => handleNavigate(request.coordinates.lat, request.coordinates.lng, request.location_name)}
                     className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 flex items-center justify-center gap-2"
                   >
                     <NavigationIcon className="w-5 h-5" />
@@ -334,6 +743,14 @@ const HostRescueRequests: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* In-App Navigation Modal — full screen route view */}
+      {navigationTarget && (
+        <NavigationModal
+          destination={navigationTarget}
+          onClose={() => setNavigationTarget(null)}
+        />
       )}
     </div>
   );

@@ -396,7 +396,8 @@ const Dashboard = () => {
           {/* Toggle Button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="w-full p-4 flex items-center justify-center hover:bg-slate-50 border-b border-slate-200 transition-colors"
+            className="flex min-h-12 w-full items-center justify-center border-b border-slate-200 px-4 py-3 text-slate-600 transition-colors hover:bg-emerald-50 hover:text-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600/30"
+            aria-label={sidebarOpen ? 'Collapse dashboard navigation' : 'Expand dashboard navigation'}
           >
             {sidebarOpen ? (
               <>
@@ -409,7 +410,7 @@ const Dashboard = () => {
           </button>
 
           {/* Menu Items */}
-          <nav className="p-2 space-y-1">
+          <nav className="space-y-1 p-2">
             {dashboardTabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -417,16 +418,17 @@ const Dashboard = () => {
                 <button
                   key={tab.id}
                   onClick={() => navigate(`/dashboard/${tab.id}`)}
-                  className={`w-full flex items-center px-4 py-3 transition-all duration-200 ${
+                  className={`dashboard-tab ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'text-slate-700 hover:bg-slate-100'
+                      ? 'dashboard-tab-active'
+                      : 'dashboard-tab-idle'
                   }`}
+                  aria-current={isActive ? 'page' : undefined}
                   title={!sidebarOpen ? tab.name : ''}
                 >
                   <Icon className={`${sidebarOpen ? 'w-5 h-5' : 'w-6 h-6'} flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500'}`} />
                   {sidebarOpen && (
-                    <span className={`ml-3 font-medium text-sm ${isActive ? 'text-white' : 'text-slate-700'}`}>
+                    <span className="ml-3 text-sm font-semibold">
                       {tab.name}
                     </span>
                   )}
@@ -442,12 +444,12 @@ const Dashboard = () => {
           <div className="surface-panel p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h1 className="text-3xl font-semibold text-slate-900 mb-1">Hi {user?.name}</h1>
-                  <p className="text-slate-500">Here is your charging workspace for bookings, rewards, and support.</p>
+                  <h1 className="section-title mb-1">Hi {user?.name}</h1>
+                  <p className="section-subtitle">Here is your charging workspace for bookings, rewards, and support.</p>
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-2">
+                  <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 shadow-sm">
                     <div className="flex items-center space-x-2">
                       <Zap className="h-4 w-4 text-blue-600" />
                       <div>
@@ -456,7 +458,7 @@ const Dashboard = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="rounded-xl border border-slate-200 bg-white px-4 py-2">
+                  <div className="rounded-lg border border-slate-200 bg-white px-4 py-2 shadow-sm">
                     <div className="flex items-center space-x-2">
                       <Star className="h-4 w-4 text-amber-500" />
                       <div>
@@ -479,9 +481,10 @@ const Dashboard = () => {
                   <button
                     key={tab.id}
                     onClick={() => navigate(`/dashboard/${tab.id}`)}
-                    className={`inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
+                    className={`mobile-tab ${
+                      isActive ? 'mobile-tab-active' : 'mobile-tab-idle'
                     }`}
+                    aria-current={isActive ? 'page' : undefined}
                   >
                     <Icon className="h-4 w-4" />
                     <span>{tab.name}</span>
